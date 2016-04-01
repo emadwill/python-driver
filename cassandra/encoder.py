@@ -140,6 +140,8 @@ class Encoder(object):
         Default encoder for all objects that do not have a specific encoder function
         registered. This function simply calls :meth:`str()` on the object.
         """
+        if hasattr(val, '_asdict'):
+            return self.cql_encode_namedtuple(val)
         return str(val)
 
     def cql_encode_float(self, val):
@@ -195,6 +197,18 @@ class Encoder(object):
     Converts a sequence to a string of the form ``(item1, item2, ...)``.  This
     is suitable for ``tuple`` type columns.
     """
+
+    def cql_encode_namedtuple(self, val):
+        """
+        Converts a namedtuple into a string of the form ``{key1: val1, key2: val2, ...}``.
+        This is suitable for ``UDT`` type columns.
+        """
+        val = val._asdict()
+        return '{%s}' % ', '.join('%s: %s' % (
+            k,
+            self.mapping.get(type(v), self.cql_encode_object)(v)
+        ) for k, v in six.iteritems(val))
+
 
     def cql_encode_map_collection(self, val):
         """

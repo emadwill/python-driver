@@ -19,6 +19,7 @@ import time
 import six
 from warnings import warn
 
+from cassandra.query import SimpleStatement
 from cassandra.cqlengine import columns, CQLEngineException, ValidationError, UnicodeMixin
 from cassandra.cqlengine import connection
 from cassandra.cqlengine.functions import Token, BaseQueryFunction, QueryValue
@@ -1338,3 +1339,11 @@ class DMLQuery(object):
                 continue
             ds.add_where(col, EqualsOperator(), val)
         self._execute(ds)
+
+
+def _execute_statement(model, statement, consistency_level, fetch_size, timeout):
+    params = statement.get_context()
+    s = SimpleStatement(str(statement), consistency_level=consistency_level, fetch_size=fetch_size)
+    routing_key = statement.partition_key_parts(model._partition_key_index)
+
+    return connection.execute(s, params, timeout=timeout)
